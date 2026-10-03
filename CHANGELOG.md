@@ -6,6 +6,10 @@ All notable changes to `prospectapis-mcp` are documented here. The format follow
 
 ## [Unreleased]
 
+### Changed
+
+- Tests that compare the tool schemas with the API source moved to `test/api-parity.test.js`, which runs only where that source is present; the rest of the suite runs in a standalone checkout. `npm publish` now runs the tests first (`prepublishOnly`).
+
 ## [0.2.1] - 2026-10-03
 
 ### Added

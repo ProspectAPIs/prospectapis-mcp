@@ -5,7 +5,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer, DEFAULT_BASE_URL, VERSION } from "../src/server.js";
@@ -94,16 +93,6 @@ test("research_get reads one job by id; a malformed id or purpose is refused bef
     assert.ok(bad.thrown || bad.isError, `${name} ${JSON.stringify(args).slice(0, 60)}`);
   }
   assert.equal(m.calls.length, 1);
-});
-
-test("research_submit arguments match the fields the API accepts exactly, purposes included", () => {
-  const { ALLOWED_FIELDS, PURPOSES, parseResearchInput } = createRequire(import.meta.url)("../../apps/api/src/services/research.js");
-  const submit = TOOLS.find((t) => t.name === "research_submit");
-  assert.deepEqual(Object.keys(submit.shape).sort(), [...ALLOWED_FIELDS].sort());
-  assert.deepEqual([...RESEARCH_PURPOSES].sort(), [...PURPOSES].sort());
-  for (const p of RESEARCH_PURPOSES) assert.equal(parseResearchInput({ domain: "acme.com", purpose: p }).purpose, p);
-  const body = JSON.parse(buildBody(submit, { person_name: "Jane Doe", company_name: "Acme", context: undefined, purpose: "outreach" }));
-  assert.deepEqual(parseResearchInput(body).input, { person_name: "Jane Doe", company_name: "Acme", purpose: "outreach" });
 });
 
 test("path building: placeholders interpolated and encoded, the rest become the query", () => {
@@ -209,27 +198,11 @@ test("input validation rejects a malformed id before any request", async () => {
   assert.equal(m.calls.length, 0);
 });
 
-test("funding_search parameters match the API's accepted filters exactly", () => {
-  // The API lives in the same repository; its filter parser has no
-  // dependencies, so the contract is checked against the shipped source rather
-  // than a list typed into this test.
-  const { parseFilters } = createRequire(import.meta.url)("../../apps/api/src/services/funding.js");
-  const search = TOOLS.find((t) => t.name === "funding_search");
-  for (const k of Object.keys(search.shape)) {
-    assert.doesNotThrow(() => { try { parseFilters({ [k]: "x" }); } catch (e) { if (/unknown parameter/.test(e.message)) throw e; } }, k);
-  }
-  assert.throws(() => parseFilters({ not_a_filter: "x" }), /unknown parameter/);
-});
-
-test("amount filters are bounded and written as fixed decimals the API accepts (N7)", async () => {
-  const { parseFilters } = createRequire(import.meta.url)("../../apps/api/src/services/funding.js");
+test("amount filters are bounded and written as fixed decimals (N7)", async () => {
   const search = TOOLS.find((t) => t.name === "funding_search");
   for (const [v, want] of [[0.1 + 0.2, "0.3"], [1234567.123456, "1234567.1235"], [5e6, "5000000"], [0, "0"], [MAX_AMOUNT_USD, "999999999999999"]]) {
     assert.equal(formatAmount(v), want);
-    const u = new URL(buildUrl("https://api.example.test", search, { min_amount_usd: v }));
-    const sent = u.searchParams.get("min_amount_usd");
-    assert.equal(sent, want);
-    assert.doesNotThrow(() => parseFilters({ min_amount_usd: sent }), `API rejects ${sent}`);
+    assert.equal(new URL(buildUrl("https://api.example.test", search, { min_amount_usd: v })).searchParams.get("min_amount_usd"), want);
   }
   // Out of range is refused by the tool schema before any request.
   const m = mockFetch(() => ({}));
@@ -238,7 +211,6 @@ test("amount filters are bounded and written as fixed decimals the API accepts (
   assert.ok(r.thrown || r.isError);
   assert.equal(m.calls.length, 0);
 });
-
 
 test("feedback_send posts a JSON body to /v1/feedback, is a write tool, and refuses a bad tool name before any request", async () => {
   const m = mockFetch(() => ({ status: 202, body: { feedback_id: "x", status: "sent" } }));
