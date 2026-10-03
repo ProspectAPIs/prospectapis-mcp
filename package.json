@@ -1,0 +1,53 @@
+{
+  "name": "prospectapis-mcp",
+  "version": "0.2.1",
+  "description": "MCP server for ProspectAPIs: search funding rounds, run paid prospect research briefs, manage funding watchlists, read your balance and the live price list.",
+  "type": "module",
+  "bin": {
+    "prospectapis-mcp": "src/index.js"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./server": "./src/server.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js && node --check src/server.js && node --check src/tools.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0 || ^4.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "funding",
+    "venture-capital",
+    "prospecting",
+    "prospectapis",
+    "sales-research",
+    "agents"
+  ],
+  "homepage": "https://prospectapis.com/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ProspectAPIs/prospectapis-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ProspectAPIs/prospectapis-mcp/issues"
+  },
+  "author": "ProspectAPIs",
+  "license": "MIT"
+}
