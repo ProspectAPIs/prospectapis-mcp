@@ -54,7 +54,7 @@ Claude Code: `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... --
 
 ## FAQ
 
-**Where does the funding data come from?** Each record carries the URL where the round was announced.
+**Where does the funding data come from?** Each record carries the URL where the round was announced, when there is one.
 
 **What is free?** 100 funding records a month, any search that matches nothing, watchlist management, and the balance, pricing and version tools.
 

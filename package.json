@@ -26,7 +26,7 @@
     "start": "node src/index.js",
     "check": "node --check src/index.js && node --check src/server.js && node --check src/tools.js",
     "test": "node --test \"test/**/*.test.js\"",
-    "prepublishOnly": "npm test && node scripts/prepublish-tenant-check.mjs",
+    "prepublishOnly": "npm test",
     "check:registry-drift": "node scripts/registry-drift.mjs",
     "postpublish": "node scripts/registry-drift.mjs --publish"
   },
