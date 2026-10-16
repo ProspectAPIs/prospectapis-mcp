@@ -33,6 +33,11 @@ test("the opening names the package and fits a listing", () => {
   const words = opening.split(/\s+/).length;
   assert.ok(words <= 130, `the opening is ${words} words; listings copy about the first 120`);
   assert.ok(!/[–—]/.test(opening), "no en or em dash in the opening");
+  // The prices the opening states are the live ones (api pricing endpoint, read 2026-10-16:
+  // $0.02 each after 100 free a month, research $0.15). A changed price edits both.
+  for (const claim of ["$0.02 each", "100 free", "$0.15"]) {
+    assert.ok(opening.includes(claim), `the opening no longer states "${claim}"; update the price here and in the opening together`);
+  }
 });
 
 test("the Website line is server.json websiteUrl", () => {

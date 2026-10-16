@@ -1,6 +1,6 @@
 # prospectapis-mcp
 
-prospectapis-mcp is the MCP server for ProspectAPIs, built for sales teams and their AI agents in Claude Code, Claude Desktop, Cursor and other MCP clients. It gives your agent fourteen tools over the ProspectAPIs API: search funding rounds by date, round, amount, company, investor and country, get new matching rounds pushed to your webhook, and order a cited research brief on any company or person. Every funding record carries the URL where the round was announced. Records cost $0.02 each after 100 free a month, a completed brief costs $0.15, and there are no seats, no subscription and no card to sign up. It needs Node.js 22 or later.
+prospectapis-mcp is the MCP server for ProspectAPIs, built for sales teams and their AI agents in Claude Code, Claude Desktop, Cursor and other MCP clients. It gives your agent fourteen tools over the ProspectAPIs API: search funding rounds by date, round, amount, company, investor and country, get new matching rounds pushed to your webhook, and order a cited research brief on any company or person. Every funding record carries the URL where the round was announced, when there is one. Records cost $0.02 each after 100 free a month, a completed brief costs $0.15, and there are no seats, no subscription and no card to sign up. It needs Node.js 22 or later.
 
 Install (Claude Code): `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... -- npx -y prospectapis-mcp`
 
