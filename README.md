@@ -1,10 +1,12 @@
 # prospectapis-mcp
 
-MCP server for the ProspectAPIs funding data and research API. It gives an MCP client (Claude Desktop, Claude
-Code, Cursor and others) fourteen tools over `https://api.prospectapis.com`, one per customer endpoint (the
-liveness probe `GET /health` has none; `api_version` answers the same question). Five tools change state:
-`research_submit` (starts a paid research job), `watchlist_create`, `watchlist_test`, `watchlist_delete` and
-`feedback_send`; every other tool only reads.
+prospectapis-mcp is the MCP server for ProspectAPIs, built for sales teams and their AI agents in Claude Code, Claude Desktop, Cursor and other MCP clients. It gives your agent fourteen tools over the ProspectAPIs API: search funding rounds by date, round, amount, company, investor and country, get new matching rounds pushed to your webhook, and order a cited research brief on any company or person. Every funding record carries the URL where the round was announced. Records cost $0.02 each after 100 free a month, a completed brief costs $0.15, and there are no seats, no subscription and no card to sign up. It needs Node.js 22 or later.
+
+Install (Claude Code): `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... -- npx -y prospectapis-mcp`
+
+Other clients: run `npx -y prospectapis-mcp` with `PROSPECTAPIS_API_KEY` from https://prospectapis.com
+
+Website: https://prospectapis.com/mcp
 
 | Tool | Endpoint | Cost |
 |---|---|---|
@@ -49,6 +51,14 @@ Client config (for example `claude_desktop_config.json`):
 ```
 
 Claude Code: `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... -- npx -y prospectapis-mcp`.
+
+## FAQ
+
+**Where does the funding data come from?** Each record carries the URL where the round was announced.
+
+**What is free?** 100 funding records a month, any search that matches nothing, watchlist management, and the balance, pricing and version tools.
+
+**Which clients work?** Claude Code, Claude Desktop, Cursor and any client that reads an mcpServers config, through `npx -y prospectapis-mcp`.
 
 ## Develop
 

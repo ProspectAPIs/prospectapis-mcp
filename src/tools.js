@@ -78,6 +78,7 @@ export const TOOLS = [
     body: true,
     description:
       "Start a cited pre-call research brief on one prospect: company, funding, traction, competitors, news, people, risks, regions, " +
+      "social (their X account and Reddit mentions, when found), " +
       "plus a `fit` section when you pass `context`. Give exactly ONE identifier (domain, website_url, company_name, company_linkedin_url, " +
       "a work email, or linkedin_url), or person_name together with company_name. Returns `research_id` at once; the brief takes 20 to 90 seconds, " +
       "so poll research_get every 10 to 15 seconds until `status` is `completed` or `failed`. " +
@@ -105,7 +106,10 @@ export const TOOLS = [
     write: false,
     description:
       "Read a research job by the `research_id` research_submit returned: `status` (queued, running, completed, failed), `input`, " +
-      "`result` (the brief, once completed) and `error` (once failed). Free; only your own account's jobs are visible.",
+      "`result` (the brief, once completed) and `error` (once failed). Every brief field is {value, sources, confidence}. " +
+      "`result.social` holds `x` (handle, followers, bio, posting_cadence, recent_topics, notable_posts) and `reddit` " +
+      "(mention_count_90d, top_threads, communities, tone, tone_basis); a platform with nothing found is absent, and with " +
+      "neither `social` is absent. Free; only your own account's jobs are visible.",
     shape: {
       id: z.string().uuid().describe("The `research_id` from research_submit."),
     },

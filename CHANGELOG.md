@@ -6,7 +6,26 @@ All notable changes to `prospectapis-mcp` are documented here. The format follow
 
 ## [Unreleased]
 
+## [0.2.4] - unreleased
+
 ### Changed
+
+- README opening rewritten for the listings that copy it word for word (Glama, mcpservers.org, the MCP Registry, npm): one paragraph on what the server does and costs, then the install lines and the website, plus a three-question FAQ. No tool or behaviour change; 14 tools.
+- `package-lock.json` carries the package version again (it still said 0.2.2).
+- `test/readme-opening.test.js` checks the opening against the package name, its Website line against `server.json` `websiteUrl`, every tool count the README states against `src/tools.js`, the stated Node floor against `engines`, and one version across `package.json`, `server.json` and `package-lock.json`.
+
+## [0.2.3] - 2026-10-11
+
+### Added
+
+- `server.json` (the Official MCP Registry manifest) and the matching `mcpName` field in `package.json`, both `io.github.ProspectAPIs/prospectapis-mcp`, so the server can be listed on registry.modelcontextprotocol.io (which PulseMCP ingests). No tool or behaviour change.
+- `scripts/registry-drift.mjs` with `npm run check:registry-drift` and a `postpublish` hook, so every npm release also updates the registry entry and a drift between npm, `server.json` and the registry fails the check.
+
+## [0.2.2] - 2026-10-03
+
+### Changed
+
+- `research_submit` and `research_get` describe the brief's new `social` section: the company's X account and Reddit mentions, each value cited, absent when nothing was found.
 
 - Tests that compare the tool schemas with the API source moved to `test/api-parity.test.js`, which runs only where that source is present; the rest of the suite runs in a standalone checkout. `npm publish` now runs the tests first (`prepublishOnly`).
 
