@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ProspectAPIs/prospectapis-mcp",
+  "title": "ProspectAPIs",
+  "description": "MCP server for prospectapis.com: funding rounds and cited prospect research briefs.",
+  "version": "0.2.4",
+  "websiteUrl": "https://prospectapis.com/mcp",
+  "repository": {
+    "url": "https://github.com/ProspectAPIs/prospectapis-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "prospectapis-mcp",
+      "version": "0.2.4",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "PROSPECTAPIS_API_KEY",
+          "description": "Your prospectapis.com API key (pa_live_...). Get one at https://prospectapis.com. Needed for every tool except pricing_get and api_version.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "PROSPECTAPIS_BASE_URL",
+          "description": "Override the API base URL. Defaults to https://api.prospectapis.com; only set it if you were given a different endpoint.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "https://api.prospectapis.com"
+        }
+      ]
+    }
+  ]
+}
