@@ -237,6 +237,77 @@ async function assertPinMatchesLiveSchema() {
 }
 await assertPinMatchesLiveSchema();
 
+// ── A REMOTE URL LIVES ON ONE REGISTRY NAME ────────────────────────────────
+//
+// The registry refuses a server.json whose remote URL is listed by ANY
+// non-deleted version of another server name (validateNoDuplicateRemoteURLs,
+// registry_service.go, read 2026-10-29); `deprecated` does not free it. The
+// registry publish runs in postpublish, AFTER npm has taken the version, so a
+// conflict found there leaves npm and the registry out of step for good. Its
+// public list endpoint ignores a remote_url filter (measured: an unknown URL
+// returned the same 50 servers), so this reads every name this package has
+// been listed under. Add a name here when the package moves again. A registry
+// that cannot be read blocks: a publish that cannot see the conflict must not run.
+const PRIOR_REGISTRY_NAMES = ["io.github.ProspectAPIs/prospectapis-mcp"];
+const REGISTRY_BASE = process.env.MCP_REGISTRY_URL || "https://registry.modelcontextprotocol.io";
+
+function remoteConflicts(ourName, ourUrls, listings) {
+  const hits = [];
+  for (const { name, versions } of listings) {
+    if (name === ourName) continue;
+    for (const v of versions) {
+      if (v.status === "deleted") continue;
+      for (const url of v.urls) if (ourUrls.includes(url)) hits.push(`${name} ${v.version} (${v.status}) lists ${url}`);
+    }
+  }
+  return hits;
+}
+
+async function assertRemoteUrlsFree() {
+  const srv = JSON.parse(readFileSync(join(PKG_ROOT, "server.json"), "utf8"));
+  const ourUrls = (srv.remotes || []).map((r) => r.url);
+  if (!ourUrls.length) {
+    console.log("[prepublish-tenant-check] remote URL check: server.json lists no remotes, nothing to conflict.");
+    return;
+  }
+  const listings = [];
+  for (const name of PRIOR_REGISTRY_NAMES) {
+    let body;
+    try {
+      const res = await fetch(`${REGISTRY_BASE}/v0/servers/${encodeURIComponent(name)}/versions`, { signal: AbortSignal.timeout(15_000) });
+      if (res.status === 404) continue;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      body = await res.json();
+    } catch (e) {
+      console.error(`\n[prepublish-tenant-check] BLOCKED: could not read registry versions of ${name} (${e.message}).`);
+      console.error("  The registry publish after npm would fail on a remote URL conflict this cannot see.");
+      process.exit(1);
+    }
+    if (!Array.isArray(body.servers)) {
+      console.error(`\n[prepublish-tenant-check] BLOCKED: registry versions of ${name} came back without a servers array.`);
+      process.exit(1);
+    }
+    listings.push({
+      name,
+      versions: body.servers.map((s) => ({
+        version: s.server?.version,
+        status: s._meta?.["io.modelcontextprotocol.registry/official"]?.status ?? "unknown",
+        urls: (s.server?.remotes || []).map((r) => r.url),
+      })),
+    });
+  }
+  const hits = remoteConflicts(srv.name, ourUrls, listings);
+  if (hits.length) {
+    console.error("\n[prepublish-tenant-check] BLOCKED: another registry name still holds this package's remote URL.");
+    for (const h of hits) console.error(`  - ${h}`);
+    console.error("  Set that version to deleted (mcp-publisher status --status deleted <name> <version>) first;");
+    console.error("  deprecated does not free it. Otherwise npm publishes and the registry publish after it fails.");
+    process.exit(1);
+  }
+  console.log(`[prepublish-tenant-check] remote URL check OK: ${ourUrls.length} URL(s) free across ${listings.length} prior name(s).`);
+}
+if (!process.argv.includes("--selftest")) await assertRemoteUrlsFree();
+
 // ── npm's OWN LIMIT, WHICH IT DOES NOT TELL YOU ABOUT ──────────────────────
 //
 // The MCP registry refuses an over-long description with a 422. npm does not

@@ -11,8 +11,9 @@ All notable changes to `prospectapis-mcp` are documented here. The format follow
 ### Changed
 
 - `server.json` lists the hosted endpoint `https://api.prospectapis.com/mcp` under `remotes` again. It moved here from
-  the earlier `io.github.ProspectAPIs/prospectapis-mcp` entry, which is now deprecated in favour of this one. No code
-  change; the tools, inputs and outputs are the same as 0.4.1.
+  the earlier `io.github.ProspectAPIs/prospectapis-mcp` entry, which is retired in favour of this one (its 0.2.4
+  version, the one that listed the endpoint, is deleted from the registry). No code change; the tools, inputs and
+  outputs are the same as 0.4.1.
 
 ## [0.4.1] - 2026-10-26
 
