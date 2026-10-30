@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createServer, DEFAULT_BASE_URL, VERSION } from "../src/server.js";
+import { createServer, DEFAULT_BASE_URL, INSTRUCTIONS, VERSION } from "../src/server.js";
 import { TOOLS, buildPath, buildQuery, buildUrl, buildBody, formatAmount, MAX_AMOUNT_USD, RESEARCH_PURPOSES } from "../src/tools.js";
 
 const KEY = "pa_live_" + "ab".repeat(24);
@@ -39,10 +39,10 @@ test("package metadata: name, version, ESM", () => {
   assert.equal(DEFAULT_BASE_URL, "https://api.prospectapis.com");
 });
 
-const WRITERS = new Set(["research_submit", "feedback_send", "watchlist_create", "watchlist_test", "watchlist_delete"]);
+const WRITERS = new Set(["research_submit", "email_verify", "email_find", "email_clean_list", "email_outcomes_report", "email_verify_job_create", "email_verify_job_stop", "feedback_send", "watchlist_create", "watchlist_test", "watchlist_delete"]);
 
-test("catalog: one tool per endpoint, well-formed; only research_submit and feedback_send write", () => {
-  assert.deepEqual(TOOLS.map((t) => t.name), ["funding_search", "funding_get", "research_submit", "research_get", "watchlist_create", "watchlist_list", "watchlist_get", "watchlist_deliveries", "watchlist_test", "watchlist_delete", "account_balance", "feedback_send", "pricing_get", "api_version"]);
+test("catalog: one tool per endpoint, well-formed; only the WRITERS write", () => {
+  assert.deepEqual(TOOLS.map((t) => t.name), ["funding_search", "funding_get", "research_submit", "research_get", "email_verify", "email_domain_check", "email_find", "email_verify_calibration", "email_clean_list", "email_verify_stats", "email_outcomes_report", "email_verify_job_create", "email_verify_job_get", "email_verify_job_results", "email_verify_job_stop", "watchlist_create", "watchlist_list", "watchlist_get", "watchlist_deliveries", "watchlist_test", "watchlist_delete", "account_balance", "feedback_send", "pricing_get", "api_version"]);
   for (const t of TOOLS) {
     assert.equal(t.write, WRITERS.has(t.name), t.name);
     assert.equal(t.method === "GET", !WRITERS.has(t.name), t.name);
@@ -58,7 +58,7 @@ test("catalog: one tool per endpoint, well-formed; only research_submit and feed
   ]);
 });
 
-test("the server lists every catalog tool; every tool but the two writers is read-only", async () => {
+test("the server lists every catalog tool; every tool but the WRITERS is read-only", async () => {
   const client = await connect({ apiKey: KEY, fetchImpl: mockFetch(() => ({})).impl });
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), TOOLS.map((t) => t.name).sort());
@@ -78,6 +78,41 @@ test("research_submit POSTs the arguments as a JSON body, with no query string",
   assert.deepEqual(JSON.parse(m.calls[0].init.body), { domain: "acme.com", context: "We sell payroll software.", purpose: "pre_call" });
   assert.equal(JSON.parse(r.content[0].text).status, "queued");
   assert.equal(buildBody(TOOLS.find((t) => t.name === "funding_search"), { limit: 5 }), null, "GET tools send no body");
+});
+
+test("email_verify POSTs the address list as a JSON body, states its price, and refuses 0 or 26 addresses before any request", async () => {
+  const reply = {
+    data: [{ email: "a@acme.com", status: "valid", reason: "accepted", charged: true, flags: [], smtp_code: 250, catch_all_tier: null }],
+    count: 1,
+    charged_count: 1,
+    amount_usd: 0.004,
+  };
+  const m = mockFetch(() => ({ body: reply }));
+  const client = await connect({ apiKey: KEY, baseUrl: "https://api.example.test", fetchImpl: m.impl });
+  const r = await client.callTool({ name: "email_verify", arguments: { emails: ["a@acme.com"] } });
+  assert.equal(r.isError, undefined);
+  assert.equal(m.calls.length, 1);
+  assert.equal(m.calls[0].url, "https://api.example.test/v1/email/verify");
+  assert.equal(m.calls[0].init.method, "POST");
+  assert.equal(m.calls[0].init.headers["content-type"], "application/json");
+  assert.equal(m.calls[0].init.headers.authorization, `Bearer ${KEY}`);
+  assert.deepEqual(JSON.parse(m.calls[0].init.body), { emails: ["a@acme.com"] });
+  assert.deepEqual(JSON.parse(r.content[0].text), reply);
+  const t = TOOLS.find((x) => x.name === "email_verify");
+  assert.match(t.description, /\$0\.004/);
+  assert.match(t.description, /catch-all and unknown results are free/);
+  assert.match(t.description, /1 to 25/);
+  for (const emails of [[], Array.from({ length: 26 }, (_, i) => `u${i}@acme.com`)]) {
+    const bad = await client.callTool({ name: "email_verify", arguments: { emails } }).catch((e) => ({ thrown: e }));
+    assert.ok(bad.thrown || bad.isError, `${emails.length} addresses must be refused`);
+  }
+  assert.equal(m.calls.length, 1);
+});
+
+test("no tool description or the server instructions promise monthly free records", () => {
+  for (const t of TOOLS) assert.doesNotMatch(t.description, /free records|a month|calendar month/i, t.name);
+  assert.doesNotMatch(INSTRUCTIONS, /free records|calendar month/i);
+  assert.match(INSTRUCTIONS, /free \$1 balance/);
 });
 
 test("research_get reads one job by id; a malformed id or purpose is refused before any request", async () => {
@@ -129,7 +164,7 @@ test("api_version needs no key and sends none", async () => {
 });
 
 test("pricing_get needs no key, sends none and reads GET /pricing at the API root", async () => {
-  const m = mockFetch(() => ({ body: { currency: "usd", funding: { price_per_record_usd: 0.02, free_records_per_month: 100 } } }));
+  const m = mockFetch(() => ({ body: { currency: "usd", signup_credit_usd: 1, funding: { price_per_record_usd: 0.02, free_records_per_month: 0 } } }));
   const client = await connect({ apiKey: undefined, baseUrl: "https://api.example.test", fetchImpl: m.impl });
   const r = await client.callTool({ name: "pricing_get", arguments: {} });
   assert.equal(r.isError, undefined);

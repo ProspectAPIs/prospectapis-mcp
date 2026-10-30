@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.ProspectAPIs/prospectapis-mcp",
+  "name": "com.prospectapis/prospectapis-mcp",
   "title": "ProspectAPIs",
-  "description": "MCP server for prospectapis.com: funding rounds and cited prospect research briefs.",
-  "version": "0.2.4",
+  "description": "MCP server for prospectapis.com: funding rounds, email verification and cited research briefs.",
+  "version": "0.4.2",
   "websiteUrl": "https://prospectapis.com/mcp",
   "repository": {
     "url": "https://github.com/ProspectAPIs/prospectapis-mcp",
@@ -13,8 +13,10 @@
     {
       "registryType": "npm",
       "identifier": "prospectapis-mcp",
-      "version": "0.2.4",
-      "transport": { "type": "stdio" },
+      "version": "0.4.2",
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "PROSPECTAPIS_API_KEY",
@@ -28,6 +30,20 @@
           "isRequired": false,
           "isSecret": false,
           "default": "https://api.prospectapis.com"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.prospectapis.com/mcp",
+      "headers": [
+        {
+          "description": "Bearer followed by your prospectapis.com API key (pa_live_...). Get one at https://prospectapis.com.",
+          "isRequired": true,
+          "isSecret": true,
+          "name": "Authorization"
         }
       ]
     }

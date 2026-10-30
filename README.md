@@ -1,6 +1,6 @@
 # prospectapis-mcp
 
-prospectapis-mcp is the MCP server for ProspectAPIs, built for sales teams and their AI agents in Claude Code, Claude Desktop, Cursor and other MCP clients. It gives your agent fourteen tools over the ProspectAPIs API: search funding rounds by date, round, amount, company, investor and country, get new matching rounds pushed to your webhook, and order a cited research brief on any company or person. Every funding record carries the URL where the round was announced, when there is one. Records cost $0.02 each after 100 free a month, a completed brief costs $0.15, and there are no seats, no subscription and no card to sign up. It needs Node.js 22 or later.
+prospectapis-mcp is the MCP server for ProspectAPIs (https://prospectapis.com), for sales and prospecting teams and the AI agents they run in Claude Code, Claude Desktop, Cursor and other MCP clients. It gives your agent twenty-five tools over the ProspectAPIs API: search funding rounds by date, round, amount, company, investor and country, get new matching rounds pushed to your webhook, verify, find and bulk-check email addresses, report what bounced, and order a cited research brief on any company or person. Funding records carry the public announcement URL when there is one. Every account starts with a free $1 balance and no card: records cost $0.02, an email check $0.004 and a completed brief $0.15, with no seats and no subscription. It needs Node.js 22 or later.
 
 Install (Claude Code): `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... -- npx -y prospectapis-mcp`
 
@@ -10,10 +10,16 @@ Website: https://prospectapis.com/mcp
 
 | Tool | Endpoint | Cost |
 |---|---|---|
-| `funding_search` | `GET /v1/funding` | $0.02 per record returned, after 100 free records a month; no match is free |
+| `funding_search` | `GET /v1/funding` | $0.02 per record returned; no match is free |
 | `funding_get` | `GET /v1/funding/:id` | $0.02 when found; a missing id is free |
 | `research_submit` | `POST /v1/research` | one research at `research_price_usd` (see `account_balance`), charged only when the brief completes; refunded on failure |
 | `research_get` | `GET /v1/research/:id` | free; poll until `status` is `completed` or `failed` |
+| `email_verify` | `POST /v1/email/verify` | $0.004 per `valid` or `invalid` result; `catch-all` and `unknown` are free; 1 to 25 addresses a call |
+| `email_verify_stats` | `GET /v1/email/verify/stats` | free |
+| `email_outcomes_report` | `POST /v1/email/outcomes` | free; 1 to 100 outcomes a call |
+| `email_verify_job_create` | `POST /v1/email/verify/jobs` | free to start; $0.004 per `valid` or `invalid` result as it is checked; up to 50,000 addresses |
+| `email_verify_job_get` | `GET /v1/email/verify/jobs/:id` | free |
+| `email_verify_job_results` | `GET /v1/email/verify/jobs/:id/results` | free; 1,000 a page |
 | `watchlist_create`, `watchlist_list`, `watchlist_get`, `watchlist_deliveries`, `watchlist_test`, `watchlist_delete` | `/v1/watchlists` | free to manage; a delivered event costs one record, only when your webhook answers 2xx |
 | `account_balance` | `GET /v1/account` | free |
 | `feedback_send` | `POST /v1/feedback` | free; reports a bug, wrong field or missing capability to the team (10 an hour per key) |
@@ -28,6 +34,10 @@ Website: https://prospectapis.com/mcp
 `company_linkedin_url`, a work `email` or `linkedin_url`), or `person_name` with `company_name`, plus an optional
 `context` (your own product, at most 1,000 characters) and `purpose` (`account_research`, `pre_call` or
 `outreach`). It returns a `research_id` at once; a brief takes 20 to 90 seconds.
+
+`email_verify` takes `emails`, a list of 1 to 25 addresses. Each result has `status` (`valid`, `invalid`,
+`catch-all` or `unknown`), `reason`, `reason_text`, `score` (0 to 100), `recommendation` (`send`, `send_with_caution`, `retry_later` or `do_not_send`), `charged`, `flags`, `smtp_code` and `catch_all_tier`. If the balance covers only
+some addresses, the rest come back `unknown` with reason `not_checked_insufficient_credits` and are not charged.
 
 ## Configure
 
@@ -54,9 +64,9 @@ Claude Code: `claude mcp add prospectapis -e PROSPECTAPIS_API_KEY=pa_live_... --
 
 ## FAQ
 
-**Where does the funding data come from?** Each record carries the URL where the round was announced, when there is one.
+**Where does the funding data come from?** Records carry the public announcement URL when there is one.
 
-**What is free?** 100 funding records a month, any search that matches nothing, watchlist management, and the balance, pricing and version tools.
+**What is free?** A $1 balance when you sign up (about 50 funding records, 250 email checks or 6 research briefs), any search that matches nothing, catch-all and unknown email results, watchlist management, and the balance, pricing and version tools.
 
 **Which clients work?** Claude Code, Claude Desktop, Cursor and any client that reads an mcpServers config, through `npx -y prospectapis-mcp`.
 
