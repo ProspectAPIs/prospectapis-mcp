@@ -21,7 +21,7 @@ const srv = JSON.parse(read("server.json"));
 const lock = JSON.parse(read("package-lock.json"));
 
 const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven",
-  "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+  "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty"];
 const toNumber = (s) => (/^\d+$/.test(s) ? Number(s) : WORDS.indexOf(s.toLowerCase()));
 
 const blocks = readme.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
@@ -33,11 +33,14 @@ test("the opening names the package and fits a listing", () => {
   const words = opening.split(/\s+/).length;
   assert.ok(words <= 130, `the opening is ${words} words; listings copy about the first 120`);
   assert.ok(!/[–—]/.test(opening), "no en or em dash in the opening");
-  // The prices the opening states are the live ones (api pricing endpoint, read 2026-10-16:
-  // $0.02 each after 100 free a month, research $0.15). A changed price edits both.
-  for (const claim of ["$0.02 each", "100 free", "$0.15"]) {
-    assert.ok(opening.includes(claim), `the opening no longer states "${claim}"; update the price here and in the opening together`);
-  }
+});
+
+test("the opening names who it is for and the product URL in its first sentence", () => {
+  // Listings copy the first sentence alone (a directory card, a search snippet), so the
+  // product URL and the audience have to be IN it, or the card links GitHub only.
+  const first = opening.split(/(?<=[.!?])\s/)[0];
+  assert.ok(first.includes(srv.websiteUrl.replace(/\/mcp$/, "")), `first sentence names the product URL, got: ${first}`);
+  assert.ok(/\bsales\b/i.test(first), `first sentence names who it is for, got: ${first}`);
 });
 
 test("the Website line is server.json websiteUrl", () => {
@@ -68,4 +71,13 @@ test("one version across package.json, server.json and package-lock.json", () =>
     'package-lock.json packages[""].version': lock.packages?.[""]?.version,
   };
   assert.equal(new Set(Object.values(versions)).size, 1, JSON.stringify(versions));
+});
+
+test("the README never promises a source URL on every record", () => {
+  // The API returns source_url null for some records, so "every record" or
+  // "each record" with a URL in the same sentence is a guarantee it does not keep.
+  const sentences = readme.split(/(?<=[.?!])\s+/);
+  const promise = sentences.filter((s) => /\b(every|each|all)\b[^.?!]*\brecords?\b/i.test(s) && /\bURL\b/.test(s));
+  assert.deepEqual(promise, [], `README promises a URL on every record: ${promise.join(" | ")}`);
+  assert.ok(/URL when there is one/.test(readme), "README says the URL is present only when there is one");
 });

@@ -1,8 +1,8 @@
 {
   "name": "prospectapis-mcp",
-  "version": "0.2.4",
-  "mcpName": "io.github.ProspectAPIs/prospectapis-mcp",
-  "description": "MCP server for ProspectAPIs: search funding rounds, run paid prospect research briefs, manage funding watchlists, read your balance and the live price list.",
+  "version": "0.4.2",
+  "mcpName": "com.prospectapis/prospectapis-mcp",
+  "description": "MCP server for ProspectAPIs: search funding rounds, verify email addresses, run paid prospect research briefs, manage funding watchlists, read your balance and the live price list.",
   "type": "module",
   "bin": {
     "prospectapis-mcp": "src/index.js"
@@ -26,7 +26,10 @@
     "start": "node src/index.js",
     "check": "node --check src/index.js && node --check src/server.js && node --check src/tools.js",
     "test": "node --test \"test/**/*.test.js\"",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test && node scripts/prepublish-tenant-check.mjs",
+    "check:registry-drift": "node scripts/registry-drift.mjs",
+    "export:public": "node scripts/export-public.mjs",
+    "postpublish": "node scripts/registry-drift.mjs --publish"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

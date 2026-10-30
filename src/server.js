@@ -1,22 +1,27 @@
 // MCP server wiring: one registered tool per catalog entry, each a single
-// authenticated request (a GET, or a POST with a JSON body for research_submit)
+// authenticated request (a GET, or a POST with a JSON body for research_submit and email_verify)
 // against the ProspectAPIs REST API. Exported as a factory
 // (createServer) so tests inject a fake fetch and a host could inject auth.
 
 import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { TOOLS, buildUrl, buildPath, buildBody } from "./tools.js";
+import { TOOLS, buildUrl, buildPath, buildBody, annotationsFor } from "./tools.js";
+import { z } from "zod";
+import { GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { PLAYBOOKS, PLAYBOOK_MIME } from "./playbooks.js";
 
 export const { version: VERSION } = createRequire(import.meta.url)("../package.json");
 
 export const DEFAULT_BASE_URL = "https://api.prospectapis.com";
 export const DEFAULT_TIMEOUT_MS = 30000;
 export const SIGNUP_URL = "https://prospectapis.com/signup?utm_source=mcp";
-export const TOP_UP_URL = "https://prospectapis.com/dashboard/credits?utm_source=mcp";
+export const TOP_UP_URL = "https://prospectapis.com/dashboard/billing?utm_source=mcp";
 
 export const INSTRUCTIONS =
-  "ProspectAPIs MCP server: funding rounds data and prospect research briefs. funding_search and funding_get cost $0.02 per record returned, " +
-  "after 100 free records per calendar month; a search that matches nothing costs nothing. account_balance, pricing_get and api_version are free. " +
+  "ProspectAPIs MCP server: funding rounds data, email verification and prospect research briefs. Every account starts with a free $1 balance " +
+  "(no card, no monthly reset), and each paid call draws from it at its own price. funding_search and funding_get cost $0.02 per record returned; " +
+  "a search that matches nothing costs nothing. email_verify checks 1 to 25 addresses for $0.004 per valid or invalid result; catch-all and " +
+  "unknown results are free. account_balance, pricing_get and api_version are free. " +
   "Use filters (dates, round, amount, domain, investor, country) to keep result sets small, and call account_balance before a large paged search. " +
   "research_submit starts a cited brief on one prospect and returns a research_id; poll research_get (free) until it is completed or failed. " +
   "A research is charged only when it completes, at the research_price_usd account_balance reports. " +
@@ -25,8 +30,7 @@ export const INSTRUCTIONS =
 
 export function hintFor(status) {
   if (status === 401) return " (missing or invalid API key: set PROSPECTAPIS_API_KEY to a key from the dashboard)";
-  // research never draws on free records, so the hint does not promise any (PR #23 review, L4)
-  if (status === 402) return ` (not enough credit for this call; the body says what it costs: top up at ${TOP_UP_URL})`;
+  if (status === 402) return ` (out of credits for this call; the body says what it costs: top up at ${TOP_UP_URL})`;
   if (status === 400) return " (an argument was rejected: the body says which one)";
   if (status === 404) return " (not found: the id may be wrong, or the record is not published)";
   if (status === 429) return " (rate limited: wait a few seconds and retry)";
@@ -91,13 +95,60 @@ export function createServer({
   }
 
   const server = new McpServer({ name: "prospectapis", version: VERSION }, { instructions: INSTRUCTIONS });
+
+  // Playbooks (src/playbooks.js): each one a resource (resources/list, resources/read) and a prompt (prompts/list,
+  // prompts/get). The prompt hands the playbook over as an embedded resource, so the recipe a user picks is exactly
+  // the one resources/read serves. Registering either declares that capability, which a server with none does not
+  // advertise.
+  for (const p of PLAYBOOKS) {
+    server.registerResource(
+      p.name,
+      p.uri,
+      { title: p.title, description: p.description, mimeType: PLAYBOOK_MIME },
+      async (uri) => ({ contents: [{ uri: uri.href, mimeType: PLAYBOOK_MIME, text: p.text }] }),
+    );
+  }
+  // `arguments` is optional on prompts/get (MCP spec), but the SDK validates a prompt that declares arguments against
+  // a required object, so a client that leaves it out would get -32602 for an argument it was told is optional. The
+  // SDK installs its prompts/get handler through the low-level Server the first time a prompt is registered; wrapping
+  // setRequestHandler before that defaults a missing `arguments` to {} and leaves every other request untouched.
+  {
+    const low = server.server;
+    const setRequestHandler = low.setRequestHandler.bind(low);
+    low.setRequestHandler = (schema, handler) =>
+      setRequestHandler(
+        schema,
+        schema === GetPromptRequestSchema
+          ? (request, extra) => handler({ ...request, params: { ...request.params, arguments: request.params?.arguments ?? {} } }, extra)
+          : handler,
+      );
+  }
+  for (const p of PLAYBOOKS) {
+    const argsSchema = p.prompt ? { [p.prompt.arg]: z.string().max(200).optional().describe(p.prompt.describe) } : undefined;
+    server.registerPrompt(
+      p.name,
+      { title: p.title, description: p.description, ...(argsSchema ? { argsSchema } : {}) },
+      async (args = {}) => {
+        const v = p.prompt ? String(args[p.prompt.arg] ?? "").trim() : "";
+        return {
+          description: p.description,
+          messages: [
+            { role: "user", content: { type: "resource", resource: { uri: p.uri, mimeType: PLAYBOOK_MIME, text: p.text } } },
+            { role: "user", content: { type: "text", text: p.prompt && v ? p.prompt.ask(v) : "Run this playbook." } },
+          ],
+        };
+      },
+    );
+  }
+
   for (const tool of TOOLS) {
     server.registerTool(
       tool.name,
       {
+        title: tool.title,
         description: tool.description,
         inputSchema: tool.shape,
-        annotations: { title: tool.name, readOnlyHint: !tool.write, destructiveHint: false, openWorldHint: true },
+        annotations: annotationsFor(tool),
       },
       (args) => callEndpoint(tool, args),
     );
